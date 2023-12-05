@@ -12,4 +12,3 @@ main = do putStrLn $ show (exact:m_carlo)
               d = 1.01::Float
               s0 = 50::Float
               k = 70::Float
-              
