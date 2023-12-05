@@ -20,7 +20,9 @@ extra-source-files:
 description:         Please see the README on GitHub at <https://github.com/githubuser/monteParSim#readme>
 
 dependencies:
-- base >= 4.7 && < 5
+  - base >= 4.7 && < 5
+  - parallel >= 3.2.2.0  # Control.Parallel.Strategies
+  - random >= 1.2.0.0    # Data.Random
 
 ghc-options:
 - -Wall
