@@ -8,6 +8,7 @@ module Library (bernoulli, exactPrice, monteCarloSimSeq) where
 import System.Random
 import Control.Monad (replicateM)
 
+
 bernoulli :: Double -> IO Int
 bernoulli p = do
     random_val <- randomIO :: IO Double
