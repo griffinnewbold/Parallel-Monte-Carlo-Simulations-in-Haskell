@@ -26,16 +26,17 @@ main = do
 
     putStrLn "Enter the strike price (k):"
     k <- read <$> getLine
+    
+    case ((\ r' d' u' -> 0 < d' && d' < r' && r' <u') (r+1) d u) of
+        False -> error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < 1 + r < u must be maintained to get valid results."
+        True -> do
+                    putStrLn "Sequential Monte Carlo Simulation:"
+                    startTimeSeq <- getCPUTime
+                    resultSeq <- monteCarloSimSeq n t r u d s0 k
+                    endTimeSeq <- getCPUTime
+                    let elapsedTimeSeq = fromIntegral (endTimeSeq - startTimeSeq) * 1e-12 :: Double
+                    putStrLn $ "Result: " ++ show resultSeq
+                    putStrLn $ "Elapsed time: " ++ show elapsedTimeSeq ++ " seconds"
 
-    putStrLn "Sequential Monte Carlo Simulation:"
-    startTimeSeq <- getCPUTime
-    resultSeq <- monteCarloSimSeq n t r u d s0 k
-    endTimeSeq <- getCPUTime
-    let elapsedTimeSeq = fromIntegral (endTimeSeq - startTimeSeq) * 1e-12 :: Double
-    putStrLn $ "Result: " ++ show resultSeq
-    putStrLn $ "Elapsed time: " ++ show elapsedTimeSeq ++ " seconds"
-
-    putStrLn "Exact Options Price for European Model:"
-    putStrLn $ "Result: " ++ show (exactPrice t r u d s0 k)
-
-
+                    putStrLn "Exact Options Price for European Model:"
+                    putStrLn $ "Result: " ++ show (exactPrice t r u d s0 k)
