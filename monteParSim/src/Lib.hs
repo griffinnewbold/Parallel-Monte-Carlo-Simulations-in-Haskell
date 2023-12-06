@@ -30,7 +30,7 @@ import Data.Functor
 binomial :: Integer -> Integer -> Integer
 binomial n k
     | k < 0 || k > n = 0
-    | otherwise = product [1..n] `div` (product [1..k] * product [1..n - k])
+    | otherwise = product [1..n] `div` (product [1..k] * product [1..(n - k)])
 
 
 {-
@@ -44,17 +44,13 @@ def exact_price(T,r,u,d,S0,K):
     total *= (1+r)**-T
     return total
 
-T = 10
-r = .05
-u = 1.15
-d = 1.01
-S0 = 50
-K = 70
+exactPrice 10 0.05 1.15 1.01 50 70
 -}
 
 exactPrice :: Integer -> Double -> Double -> Double -> Double -> Double -> Double
-exactPrice t r u d s0 k = total * (1 + r)** negative_t
+exactPrice t r u d s0 k = total * ((1 + r)** negative_t)
   where
     negative_t = (-(fromIntegral t::Double))
     pStar = (1 + r - d) / (u - d)
-    total = sum [ fromIntegral (binomial t k) * pStar^^k * (1 - pStar) ** ((fromIntegral(t - k)) * max (s0 * u^k * d**(fromIntegral(t - k))) 0) | k <- [0..t] ]
+    total = sum [(fromIntegral (binomial t i)) * (pStar^^i) * ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**(fromIntegral(t - i)) - k) 0 | i <- [0..t] ]
+    -- total = sum [ fromIntegral (binomial t k)) * pStar^^k * (1 - pStar) ** ((fromIntegral(t - k)) * max (s0 * u^k * d**(fromIntegral(t - k))) 0) | k <- [0..t] ]
