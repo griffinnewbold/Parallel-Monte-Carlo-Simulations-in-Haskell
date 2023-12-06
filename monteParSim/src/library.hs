@@ -3,7 +3,7 @@ stack --resolver lts-19.23 ghci
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, exactPrice, monteCarloSimSeq) where
+module Library (bernoulli, exactPrice, monteCarloSimSeq, {-monteCarloSimVec-}) where
 
 import System.Random
 import Control.Monad (replicateM)
@@ -54,3 +54,8 @@ monteCarloSimSeq n t r u d s0 k = do
 
   trialSums <- sum <$> replicateM n trial
   return $ trialSums / fromIntegral n
+
+{-
+Placeholder for transition to vector operations
+-}
+--monteCarloSimVec :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
