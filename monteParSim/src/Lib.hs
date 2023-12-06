@@ -52,11 +52,9 @@ S0 = 50
 K = 70
 -}
 
-
--- *** Exception: Negative exponent
--- Not sure what to do about this
 exactPrice :: Integer -> Double -> Double -> Double -> Double -> Double -> Double
-exactPrice t r u d s0 k = total * (1 + r)^t
+exactPrice t r u d s0 k = total * 1 / ((1 + r)^t)
   where
+    negative_t = (-t)
     pStar = (1 + r - d) / (u - d)
     total = sum [ fromIntegral (binomial t k) * pStar^^k * (1 - pStar) ** ((fromIntegral(t - k)) * max (s0 * u^k * d**(fromIntegral(t - k))) 0) | k <- [0..t] ]
