@@ -1,6 +1,6 @@
 module Main (main) where
 
-import Lib
+import Library
 
 main :: IO ()
 main = do putStrLn $ show (exact:m_carlo)
