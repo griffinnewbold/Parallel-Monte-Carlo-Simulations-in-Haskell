@@ -7,6 +7,7 @@ module Library (bernoulli, exactPrice, monteCarloSimSeq, {-monteCarloSimVec-}) w
 
 import System.Random
 import Control.Monad (replicateM)
+import Math.Combinatorics.Exact.Binomial
 
 
 bernoulli :: Double -> IO Int
@@ -17,7 +18,7 @@ bernoulli p = do
 binomial :: Int -> Int -> Int
 binomial n k
     | k < 0 || k > n = 0
-    | otherwise = product [1..n] `div` (product [1..k] * product [1..(n - k)])
+    | otherwise      = product [1..n] `div` (product [1..k] * product [1..(n - k)])
 
 
 {-
@@ -27,9 +28,9 @@ exactPrice 10 0.05 1.15 1.01 50 70
 exactPrice :: Int -> Double -> Double -> Double -> Double -> Double -> Double
 exactPrice t r u d s0 k = total * ((1 + r)** negative_t)
   where
-    negative_t = (-(fromIntegral t::Double))
+    negative_t = -(fromIntegral t::Double)
     pStar = (1 + r - d) / (u - d)
-    total = sum [(fromIntegral (binomial t i)) * (pStar^^i) * ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**(fromIntegral(t - i)) - k) 0 | i <- [0..t] ]
+    total = sum [(fromIntegral (t `binomial` i)) * (pStar^^i) * ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**(fromIntegral(t - i)) - k) 0 | i <- [0..t] ]
 
 
 {-
