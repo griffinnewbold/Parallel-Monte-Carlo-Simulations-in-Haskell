@@ -7,7 +7,6 @@ module Library (bernoulli, exactPrice, monteCarloSimSeq, {-monteCarloSimVec-}) w
 
 import System.Random
 import Control.Monad (replicateM)
-import Math.Combinatorics.Exact.Binomial
 
 
 bernoulli :: Double -> IO Int
