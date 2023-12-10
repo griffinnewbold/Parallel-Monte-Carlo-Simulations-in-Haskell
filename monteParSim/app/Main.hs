@@ -47,6 +47,6 @@ main = do
                 putStrLn $ "Elapsed time: " ++ show elapsedTimeSeq ++ "nano seconds"
 
                 putStrLn "Exact Options Price for European Model:"
-                putStrLn $ "Result: " ++ show (exactPrice t r u d s0 k)) 
-        else 
+                putStrLn $ "Result: " ++ show (exactPrice t r u d s0 k))
+        else
                 error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < 1 + r < u must be maintained to get valid results.")

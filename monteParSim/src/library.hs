@@ -3,7 +3,7 @@ stack --resolver lts-19.23 ghci
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, exactPrice, monteCarloSimSeq, {-monteCarloSimVec-}) where
+module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian {-monteCarloSimVec-}) where
 
 import System.Random
 import Control.Monad (replicateM)
@@ -29,7 +29,9 @@ exactPrice t r u d s0 k = total * ((1 + r)** negative_t)
   where
     negative_t = -(fromIntegral t::Double)
     pStar = (1 + r - d) / (u - d)
-    total = sum [(fromIntegral (t `binomial` i)) * (pStar^^i) * ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**(fromIntegral(t - i)) - k) 0 | i <- [0..t] ]
+    total = sum [(fromIntegral (t `binomial` i)) * (pStar^^i) *
+                ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**
+                (fromIntegral(t - i)) - k) 0 | i <- [0..t]]
 
 
 {-
@@ -59,3 +61,29 @@ monteCarloSimSeq n t r u d s0 k = do
 Placeholder for transition to vector operations
 -}
 --monteCarloSimVec :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+
+{-
+Command:
+monteCarloAsian 10000 10 0.05 1.15 1.01 50 70
+-}
+monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+monteCarloAsian n t r u d s0 k = do
+  let discount = 1 / ((1 + r) ^ t)
+      p_star = (1 + r - d) / (u - d)
+
+  let trial = do
+        let calcPrice i sum_prices
+              | i == t = return sum_prices
+              | otherwise = do
+                b <- bernoulli p_star
+                if b == 1
+                    then calcPrice (i + 1) (sum_prices + s0*u)
+                    else calcPrice (i + 1) (sum_prices + s0*d)
+
+        sum_prices <- calcPrice 0 0
+        {- diff_val: difference between the average stock price and the strike price.-}
+        let diff_val = (sum_prices / fromIntegral t :: Double) - k
+        return $ max diff_val 0
+
+  total <- sum <$> replicateM n trial
+  return $ (total * discount) / fromIntegral n
