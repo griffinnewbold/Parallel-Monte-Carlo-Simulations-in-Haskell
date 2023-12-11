@@ -3,10 +3,10 @@ stack --resolver lts-19.23 ghci
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian {-monteCarloSimVec-}) where
+module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, validateInputs {-monteCarloSimVec-}) where
 
 import System.Random
-import Control.Monad (replicateM)
+import Control.Monad (replicateM, unless, when)
 
 
 bernoulli :: Double -> IO Int
@@ -30,8 +30,8 @@ exactPrice t r u d s0 k = total * ((1 + r)** negative_t)
     negative_t = -(fromIntegral t::Double)
     pStar = (1 + r - d) / (u - d)
     total = sum [(fromIntegral (t `binomial` i)) * (pStar^^i) *
-                ((1 - pStar) ** (fromIntegral(t - i))) * max (s0 * u^i * d**
-                (fromIntegral(t - i)) - k) 0 | i <- [0..t]]
+                ((1 - pStar) ** (fromIntegral (t - i))) * max (s0 * u^i * d**
+                (fromIntegral (t - i)) - k) 0 | i <- [0..t]]
 
 
 {-
@@ -68,6 +68,7 @@ monteCarloAsian 10000 10 0.05 1.15 1.01 50 70
 -}
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsian n t r u d s0 k = do
+  validateInputs n t r u d s0 k
   let discount = 1 / ((1 + r) ^ t)
       p_star = (1 + r - d) / (u - d)
 
@@ -86,3 +87,17 @@ monteCarloAsian n t r u d s0 k = do
 
   total <- sum <$> replicateM n trial
   return $ (total * discount) / fromIntegral n
+
+validateInputs :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO ()
+validateInputs n t r u d s0 k = do
+  when (n <= 0) $ error "Invalid value for n. Number of trials (n) must be greater than 0."
+  when (t < 1) $ error "Invalid value for t. Number of time steps (t) must be greater than or equal to 1."
+  when (r <= 0) $ error "Invalid value for r. The interest rate (r) must be greater than 0."
+  when (u <= 0) $ error "Invalid value for u. The up factor (u) must be greater than 0."
+  when (d <= 0) $ error "Invalid value for d. The down factor (d) must be greater than 0."
+  when (s0 <= 0) $ error "Invalid value for s0. Initial stock price (s0) must be greater than 0."
+  when (k <= 0) $ error "Invalid value for k. Strike price (k) must be greater than 0."
+  unless (0 < d && d < 1 + r && 1 + r < u) $
+    error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < r < u must be maintained to get valid results."
+
+
