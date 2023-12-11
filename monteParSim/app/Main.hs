@@ -42,10 +42,15 @@ main = do
                 startTimeSeq <- getCPUTime
                 resultSeq <- monteCarloSimSeq n t r u d s0 k
                 endTimeSeq <- getCPUTime
+                startTimeAsian <- getCPUTime
+                resultAsian <- monteCarloAsian n t r u d s0 k
+                endTimeAsian <- getCPUTime
                 let elapsedTimeSeq = fromIntegral (endTimeSeq - startTimeSeq) :: Double
-                putStrLn $ "Result: " ++ show resultSeq
-                putStrLn $ "Elapsed time: " ++ show elapsedTimeSeq ++ "nano seconds"
-
+                let elapsedTimeAsian = fromIntegral (endTimeAsian - startTimeAsian) :: Double
+                putStrLn $ "Result Monte Carlo European Option: " ++ show resultSeq
+                putStrLn $ "Elapsed time: " ++ show elapsedTimeSeq ++ " nano seconds"
+                putStrLn $ "Result Monte Carlo Asian Option: " ++ show resultAsian
+                putStrLn $ "Elapsed time: " ++ show elapsedTimeAsian ++ " nano seconds"
                 putStrLn "Exact Options Price for European Model:"
                 putStrLn $ "Result: " ++ show (exactPrice t r u d s0 k))
         else
