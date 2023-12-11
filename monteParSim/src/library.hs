@@ -7,6 +7,7 @@ module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, valida
 
 import System.Random
 import Control.Monad (replicateM, unless, when)
+import Control.Parallel.Strategies (parList, rdeepseq, using)
 
 
 bernoulli :: Double -> IO Int
@@ -101,3 +102,30 @@ validateInputs n t r u d s0 k = do
     error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < r < u must be maintained to get valid results."
 
 
+
+{-
+Command:
+monteCarloAsianParallel 10000 10 0.05 1.15 1.01 50 70
+-}
+monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+monteCarloAsianParallel n t r u d s0 k = do
+  validateInputs n t r u d s0 k
+  let discount = 1 / ((1 + r) ^ t)
+      p_star = (1 + r - d) / (u - d)
+
+  let trial = do
+        let calcPrice i sum_prices price
+              | i == t = return sum_prices
+              | otherwise = do
+                b <- bernoulli p_star
+                if b == 1
+                    then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
+                    else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
+        sum_prices <- calcPrice 0 0 s0
+        let avg_price = sum_prices / fromIntegral t :: Double
+        let diff_val = avg_price - k
+        return $ max diff_val 0
+
+  -- Evaluate trials in parallel
+  total <- sum . parList rdeepseq <$> replicateM n trial
+  return $ (total * discount) / fromIntegral n
