@@ -72,15 +72,14 @@ monteCarloAsian n t r u d s0 k = do
       p_star = (1 + r - d) / (u - d)
 
   let trial = do
-        let calcPrice i sum_prices
+        let calcPrice i sum_prices price
               | i == t = return sum_prices
               | otherwise = do
                 b <- bernoulli p_star
                 if b == 1
-                    then calcPrice (i + 1) (sum_prices + s0*u)
-                    else calcPrice (i + 1) (sum_prices + s0*d)
-
-        sum_prices <- calcPrice 0 0
+                    then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
+                    else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
+        sum_prices <- calcPrice 0 (0::Double) s0
         {- diff_val: difference between the average stock price and the strike price.-}
         let diff_val = (sum_prices / fromIntegral t :: Double) - k
         return $ max diff_val 0
