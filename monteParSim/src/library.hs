@@ -3,11 +3,11 @@ stack --resolver lts-19.23 ghci
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, validateInputs {-monteCarloSimVec-}) where
+module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, validateInputs, monteCarloAsianParallel{-monteCarloSimVec-}) where
 
 import System.Random
 import Control.Monad (replicateM, unless, when)
-import Control.Parallel.Strategies (parList, rdeepseq, using)
+import Control.Parallel.Strategies (parList, rdeepseq, using, rseq)
 
 
 bernoulli :: Double -> IO Int
@@ -103,10 +103,7 @@ validateInputs n t r u d s0 k = do
 
 
 
-{-
-Command:
-monteCarloAsianParallel 10000 10 0.05 1.15 1.01 50 70
--}
+
 monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsianParallel n t r u d s0 k = do
   validateInputs n t r u d s0 k
@@ -127,5 +124,14 @@ monteCarloAsianParallel n t r u d s0 k = do
         return $ max diff_val 0
 
   -- Evaluate trials in parallel
-  total <- sum . parList rdeepseq <$> replicateM n trial
-  return $ (total * discount) / fromIntegral n
+--   total <- sum . parList rseq <$> replicateM n trial
+  total <- parList rseq <$> replicateM n trial
+  return $ (sum total * discount) / fromIntegral n
+
+{-
+ Thread state 
+ Write your own random nums using thread monad
+
+ Threading the states?
+ parallel random generator haskell
+-}
