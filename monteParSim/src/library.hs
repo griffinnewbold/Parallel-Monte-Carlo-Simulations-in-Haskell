@@ -1,19 +1,39 @@
-{- 
+ {-# LANGUAGE BangPatterns #-}
+{-
 stack --resolver lts-19.23 ghci 
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, validateInputs, monteCarloAsianParallel{-monteCarloSimVec-}) where
+module Library (bernoulli, exactPrice, monteCarloSimSeq, monteCarloAsian, validateInputs, rand_lst, monteCarloAsianParallel{-monteCarloSimVec-}) where
 
 import System.Random
-import Control.Monad (replicateM, unless, when)
+import Control.Monad (replicateM, unless, when, forM)
+import Control.Concurrent (forkIO)
 import Control.Parallel.Strategies (parList, rdeepseq, using, rseq)
+import System.Random.Mersenne.Pure64
 
+
+-- I think I need to use state/ something similar so that I can have un updated state for each
+-- next generator.  Right now it can just generate a list of random doubles between 0 1.
+
+get_rand_lst :: Int -> [Double] -> PureMT -> [Double]
+get_rand_lst 0 !x _ = x
+get_rand_lst n !x gen =
+    get_rand_lst (n - 1) (y:x) gen'
+  where
+    (y, gen') = randomDouble gen
+
+rand_lst :: Int -> [Double]
+rand_lst n = get_rand_lst n [] (pureMT $ fromIntegral seed)
+
+seed :: Int
+seed = 10
 
 bernoulli :: Double -> IO Int
 bernoulli p = do
     random_val <- randomIO :: IO Double
     return $ if random_val < p then 1 else 0
+
 
 binomial :: Int -> Int -> Int
 binomial n k
@@ -103,7 +123,6 @@ validateInputs n t r u d s0 k = do
 
 
 
-
 monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsianParallel n t r u d s0 k = do
   validateInputs n t r u d s0 k
@@ -122,11 +141,14 @@ monteCarloAsianParallel n t r u d s0 k = do
         let avg_price = sum_prices / fromIntegral t :: Double
         let diff_val = avg_price - k
         return $ max diff_val 0
-
+  total <- sum <$> replicateM n trial
+  return $ (total * discount) / fromIntegral n
+  
   -- Evaluate trials in parallel
 --   total <- sum . parList rseq <$> replicateM n trial
-  total <- parList rseq <$> replicateM n trial
-  return $ (sum total * discount) / fromIntegral n
+ -- total <- parList rseq <$> replicateM n trial
+ -- return $ (sum total * discount) / fromIntegral n
+                           
 
 {-
  Thread state 
