@@ -10,9 +10,6 @@ import System.Random
 import Control.Monad (replicateM, unless, when, forM)
 import Control.Parallel.Strategies (parList, rdeepseq, using, rseq)
 
--- Random number generator, needs to be connected to the
--- monteCarloAsianParallel. Can run 'testThis' to see if it is working.
-
 rand_generator :: (RandomGen g) => g -> [Double]
 rand_generator gen =
   [head $ randomRs (0::Double, 1::Double) gen | _ <- [0..]::[Double]]

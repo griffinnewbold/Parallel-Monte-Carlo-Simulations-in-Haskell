@@ -27,7 +27,7 @@ main = do
 
     putStrLn "Enter the strike price (k):"
     k <- read <$> getLine
-
+    validateInputs n t r u d s0 k
     putStrLn "Sequential Monte Carlo Simulation:"
     startTimeAsian <- getCPUTime
     resultAsian <- monteCarloAsian n t r u d s0 k
