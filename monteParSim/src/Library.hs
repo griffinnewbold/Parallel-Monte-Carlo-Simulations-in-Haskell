@@ -58,12 +58,15 @@ monteCarloAsianParallel n t r u d s0 k = do
   validateInputs n t r u d s0 k
   let discount = 1 / ((1 + r) ^ t)
       p_star = (1 + r - d) / (u - d)
-
+  let bernoulli2 p = do
+        randomGen <- newStdGen
+        let random_val = head $ rand_generator randomGen
+        return $ if random_val < p then 1::Int else 0::Int
   let trial = do
         let calcPrice i sum_prices price
               | i == t = return sum_prices
               | otherwise = do
-                b <- bernoulli p_star
+                b <- bernoulli2 p_star
                 if b == 1
                     then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
                     else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
