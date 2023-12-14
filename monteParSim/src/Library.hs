@@ -8,7 +8,7 @@ module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParal
 
 import System.Random
 import Control.Monad (replicateM, unless, when, forM)
-import Control.Parallel.Strategies (parList, rdeepseq, using, rseq)
+import Control.Parallel.Strategies (parList, rdeepseq, using, rseq,rpar, parMap, Eval, runEval)
 
 rand_generator :: (RandomGen g) => g -> [Double]
 rand_generator gen =
@@ -46,27 +46,30 @@ monteCarloAsian n t r u d s0 k = do
   total <- sum <$> replicateM n trial
   return $ (total * discount) / fromIntegral n
 
+
 monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
-monteCarloAsianParallel n t r u d s0 k = total >>= \t' -> pure ((t' * discount) / fromIntegral n)
-    where total = sum <$> replicateM n trial
-          bernoulli2 p = do
-                      randomGen <- newStdGen
-                      let random_val = head $ rand_generator randomGen
-                      return $ if random_val < p then 1::Int else 0::Int
-          discount = 1 / ((1 + r) ^ t)
-          p_star = (1 + r - d) / (u - d)
-          trial = do
-                let calcPrice i sum_prices price
-                      | i == t = return sum_prices
-                      | otherwise = do
-                        b <- bernoulli2 p_star
-                        if b == 1
-                            then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
-                            else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
-                sum_prices <- calcPrice 0 0 s0
-                let avg_price = sum_prices / fromIntegral t :: Double
-                let diff_val = avg_price - k
-                return $ max diff_val 0
+monteCarloAsianParallel n t r u d s0 k = do
+                            let discount = 1 / ((1 + r) ^ t)
+                            let trial _ = do
+                                            sum_prices <- calcPrice 0 0 s0
+                                            let avg_price = sum_prices / fromIntegral t :: Double
+                                            let diff_val = avg_price - k
+                                            return $ max diff_val 0
+                            let res_trials = parMap rpar trial ([1..n]::[Int])
+                            total <- sum <$> (sequence res_trials)
+                            return $ (total * discount) / fromIntegral n
+                where p_star = (1 + r - d) / (u - d)
+                      bernoulli2 p = do
+                          randomGen <- newStdGen
+                          let random_val = head $ rand_generator randomGen
+                          return $ if random_val < p then 1::Int else 0::Int
+                      calcPrice i sum_prices price
+                                  | i == t = return sum_prices
+                                  | otherwise = do
+                                    b <- bernoulli2 p_star
+                                    if b == 1
+                                        then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
+                                        else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
 
 
 validateInputs :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO ()
@@ -80,12 +83,6 @@ validateInputs n t r u d s0 k = do
   when (k <= 0) $ error "Invalid value for k. Strike price (k) must be greater than 0."
   unless (0 < d && d < 1 + r && 1 + r < u) $
     error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < r < u must be maintained to get valid results."
-  
-  -- Evaluate trials in parallel
---   total <- sum . parList rseq <$> replicateM n trial
- -- total <- parList rseq <$> replicateM n trial
- -- return $ (sum total * discount) / fromIntegral n
-                           
 
 {-
  Thread state 
