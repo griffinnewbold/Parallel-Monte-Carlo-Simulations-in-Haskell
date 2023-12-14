@@ -10,9 +10,8 @@ import System.Random
 import Control.Monad (replicateM, unless, when, forM)
 import Control.Parallel.Strategies (parList, rdeepseq, using, rseq,rpar, parMap, Eval, runEval)
 
-rand_generator :: (RandomGen g) => g -> [Double]
-rand_generator gen =
-  [head $ randomRs (0::Double, 1::Double) gen | _ <- [0..]::[Double]]
+rand_generator :: (RandomGen g) => g -> Double
+rand_generator gen = head $ randomRs (0::Double, 1::Double) gen
 
 bernoulli :: Double -> IO Int
 bernoulli p = do
@@ -61,7 +60,7 @@ monteCarloAsianParallel n t r u d s0 k = do
                 where p_star = (1 + r - d) / (u - d)
                       bernoulli2 p = do
                           randomGen <- newStdGen
-                          let random_val = head $ rand_generator randomGen
+                          let random_val = rand_generator randomGen
                           return $ if random_val < p then 1::Int else 0::Int
                       calcPrice i sum_prices price
                                   | i == t = return sum_prices
