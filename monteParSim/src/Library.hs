@@ -4,30 +4,23 @@ stack --resolver lts-19.23 ghci
 stack ghci --package random
 :set -Wall
  -}
-module Library (bernoulli, monteCarloAsian, validateInputs, rand_lst, monteCarloAsianParallel) where
+module Library (bernoulli, monteCarloAsian, validateInputs, testThis, monteCarloAsianParallel) where
 
 import System.Random
 import Control.Monad (replicateM, unless, when, forM)
 import Control.Concurrent (forkIO)
 import Control.Parallel.Strategies (parList, rdeepseq, using, rseq)
-import System.Random.Mersenne.Pure64
 
+-- Random number generator, needs to be connected to the
+-- monteCarloAsianParallel. Can run 'testThis' to see if it is working.
 
--- I think I need to use state/ something similar so that I can have un updated state for each
--- next generator.  Right now it can just generate a list of random doubles between 0 1.
+rand_generator :: (RandomGen g) => g -> [Double]
+rand_generator gen =
+  [head $ randomRs (0::Double, 1::Double) gen | _ <- [0..]::[Double]]
 
-get_rand_lst :: Int -> [Double] -> PureMT -> [Double]
-get_rand_lst 0 !x _ = x
-get_rand_lst n !x gen =
-    get_rand_lst (n - 1) (y:x) gen'
-  where
-    (y, gen') = randomDouble gen
-
-rand_lst :: Int -> [Double]
-rand_lst n = get_rand_lst n [] (pureMT $ fromIntegral seed)
-
-seed :: Int
-seed = 10
+testThis :: IO ()
+testThis = do randomGen <- newStdGen
+              print $ head $ rand_generator randomGen
 
 bernoulli :: Double -> IO Int
 bernoulli p = do
