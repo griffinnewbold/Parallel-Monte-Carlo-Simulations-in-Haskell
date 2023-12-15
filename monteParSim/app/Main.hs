@@ -2,6 +2,7 @@ module Main (main) where
 
 import Library
 import Control.Concurrent (getNumCapabilities)
+import System.Random.SplitMix
 
 {- |
 Entry point for the system asks the user to enter different quantities
@@ -35,5 +36,6 @@ main = do
     putStrLn $ "Result Monte Carlo Asian Option [Sequential]: " ++ show resultAsian
 
     coreCount <- getNumCapabilities
-    let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k
+    init_gen <- initSMGen
+    let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k init_gen
     putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar

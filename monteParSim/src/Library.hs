@@ -38,12 +38,12 @@ bernoulli p = do
 -- Parallel Content Begins --
 
 -- Main function for the parallel simulations
-monteCarloAsianParallel :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> Double
-monteCarloAsianParallel numCores n t r u d s0 k =
+monteCarloAsianParallel :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> Double
+monteCarloAsianParallel numCores n t r u d s0 k init_gen =
   let !discount = 1 / ((1 + r) ^ t)
       !p_star = (1 + r - d) / (u - d)
       chunkSize = n `div` (10 * numCores) 
-      gens = unfoldsSMGen (mkSMGen 42) n
+      gens = unfoldsSMGen init_gen n
       trials = withStrategy (parListChunk chunkSize rdeepseq) $
                map (runEval . trial p_star u d s0 k t) gens
       !result = sum trials * discount / fromIntegral n
