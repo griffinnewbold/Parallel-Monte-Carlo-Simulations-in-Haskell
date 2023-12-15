@@ -36,6 +36,6 @@ main = do
     putStrLn $ "Result Monte Carlo Asian Option [Sequential]: " ++ show resultAsian
 
     coreCount <- getNumCapabilities
-    init_gen <- initSMGen
-    let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k init_gen
+    initGen <- initSMGen
+    let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k initGen
     putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar

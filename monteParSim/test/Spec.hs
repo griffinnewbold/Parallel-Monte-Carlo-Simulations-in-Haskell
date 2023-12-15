@@ -1,6 +1,8 @@
-import Test.Hspec
 import Library 
+import Test.Hspec
+import System.Random.SplitMix
 import Control.Concurrent (getNumCapabilities)
+
 
 {- | 
 Test Suite for the Monte Carlo Simulations functions contained within the Library module.
@@ -123,7 +125,8 @@ main = hspec $ do
           k = 70
       
       coreCount <- getNumCapabilities
-      let result = monteCarloAsianParallel coreCount n t r u d s0 k
+      initGen <- initSMGen
+      let result = monteCarloAsianParallel coreCount n t r u d s0 k initGen
 
       let lowerBound = 11.4 
           upperBound = 13.5  
