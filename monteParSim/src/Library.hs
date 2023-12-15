@@ -1,29 +1,14 @@
- {-# LANGUAGE BangPatterns #-}
-{-
-stack --resolver lts-19.23 ghci 
-stack ghci --package random
-:set -Wall
- -}
-module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel) where
+module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel, bernoulliParallel, unfoldsSMGen) where
 
 import System.Random
-import Control.Monad (replicateM, unless, when, forM)
-import Control.Parallel.Strategies (parList, rdeepseq, using, rseq,rpar, parMap, Eval, runEval)
-
-rand_generator :: (RandomGen g) => g -> [Double]
-rand_generator gen =
-  [head $ randomRs (0::Double, 1::Double) gen | _ <- [0..]::[Double]]
-
-bernoulli :: Double -> IO Int
-bernoulli p = do
-    random_val <- randomIO :: IO Double
-    return $ if random_val < p then 1 else 0
+import System.Random.SplitMix
+import Control.Monad (replicateM, unless, when)
+import Control.Parallel.Strategies
 
 {-
 Command:
 monteCarloAsian 10000 10 0.05 1.15 1.01 50 70
 -}
-
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsian n t r u d s0 k = do
   validateInputs n t r u d s0 k
@@ -46,31 +31,44 @@ monteCarloAsian n t r u d s0 k = do
   total <- sum <$> replicateM n trial
   return $ (total * discount) / fromIntegral n
 
+bernoulli :: Double -> IO Int
+bernoulli p = do
+    random_val <- randomIO :: IO Double
+    return $ if random_val < p then 1 else 0
 
-monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
-monteCarloAsianParallel n t r u d s0 k = do
-                            let discount = 1 / ((1 + r) ^ t)
-                            let trial _ = do
-                                            sum_prices <- calcPrice 0 0 s0
-                                            let avg_price = sum_prices / fromIntegral t :: Double
-                                            let diff_val = avg_price - k
-                                            return $ max diff_val 0
-                            let res_trials = parMap rpar trial ([1..n]::[Int])
-                            total <- sum <$> (sequence res_trials)
-                            return $ (total * discount) / fromIntegral n
-                where p_star = (1 + r - d) / (u - d)
-                      bernoulli2 p = do
-                          randomGen <- newStdGen
-                          let random_val = head $ rand_generator randomGen
-                          return $ if random_val < p then 1::Int else 0::Int
-                      calcPrice i sum_prices price
-                                  | i == t = return sum_prices
-                                  | otherwise = do
-                                    b <- bernoulli2 p_star
-                                    if b == 1
-                                        then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
-                                        else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
+-- A function to generate a Bernoulli trial result given a probability and a generator
+bernoulliParallel :: Double -> SMGen -> (Int, SMGen)
+bernoulliParallel p gen = let (random_val, gen') = nextDouble gen
+                          in (if random_val < p then 1 else 0, gen')
 
+-- The main Monte Carlo function
+monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> Double
+monteCarloAsianParallel n t r u d s0 k =
+  let discount = 1 / ((1 + r) ^ t)
+      p_star = (1 + r - d) / (u - d)
+      initialGen = mkSMGen 42 -- Seed for the random number generator
+
+      -- Function to calculate the trial value
+      calcPrice :: Int -> Double -> Double -> SMGen -> (Double, SMGen)
+      calcPrice i sum_prices price genCalc
+        | i == t    = (sum_prices, genCalc)
+        | otherwise = let (b, genNext) = bernoulliParallel p_star genCalc
+                          (newPrice, newGen) = if b == 1
+                                               then (price * u, genNext)
+                                               else (price * d, genNext)
+                      in calcPrice (i + 1) (sum_prices + newPrice) newPrice newGen
+
+      -- Function for a single trial
+      trial :: SMGen -> Double
+      trial genTrial = let (sum_prices, _) = calcPrice 0 0 s0 genTrial
+                           diff_val = (sum_prices / fromIntegral t) - k
+                       in max diff_val 0
+
+  in (sum (parMap rdeepseq trial (unfoldsSMGen initialGen n)) * discount) / fromIntegral n
+
+-- Helper function to unfold SMGen into a list of n generators
+unfoldsSMGen :: SMGen -> Int -> [SMGen]
+unfoldsSMGen gen n = take n $ iterate (snd . splitSMGen) gen
 
 validateInputs :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO ()
 validateInputs n t r u d s0 k = do
@@ -83,11 +81,3 @@ validateInputs n t r u d s0 k = do
   when (k <= 0) $ error "Invalid value for k. Strike price (k) must be greater than 0."
   unless (0 < d && d < 1 + r && 1 + r < u) $
     error "Invalid values for r, u, and d entered.\nThe relationship 0 < d < r < u must be maintained to get valid results."
-
-{-
- Thread state 
- Write your own random nums using thread monad
-
- Threading the states?
- parallel random generator haskell
--}

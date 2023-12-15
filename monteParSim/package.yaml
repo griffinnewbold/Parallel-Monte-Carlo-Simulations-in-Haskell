@@ -24,7 +24,7 @@ dependencies:
   - parallel >= 3.2.2.0  # Control.Parallel.Strategies
   - random >= 1.2.0.0    # Data.Random
   - time >= 1.0
-  - mersenne-random-pure64 >= 0.2.2.0
+  - splitmix >= 0.1.0.4
 
 ghc-options:
 - -Wall
