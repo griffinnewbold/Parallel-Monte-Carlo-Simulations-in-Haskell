@@ -15,20 +15,20 @@ monteCarloAsian n t r u d s0 k = do
   let discount = 1 / ((1 + r) ^ t)
       p_star = (1 + r - d) / (u - d)
 
-  let trial = do
-        let calcPrice i sum_prices price
+  let strial = do
+        let sCalcPrice i sum_prices price
               | i == t = return sum_prices
               | otherwise = do
                 b <- bernoulli p_star
                 if b == 1
-                    then calcPrice (i + 1) (sum_prices + (price*u)) (price*u)
-                    else calcPrice (i + 1) (sum_prices + (price*d)) (price*d)
-        sum_prices <- calcPrice 0 (0::Double) s0
+                    then sCalcPrice (i + 1) (sum_prices + (price*u)) (price*u)
+                    else sCalcPrice (i + 1) (sum_prices + (price*d)) (price*d)
+        sum_prices <- sCalcPrice 0 (0::Double) s0
         {- diff_val: difference between the average stock price and the strike price.-}
         let diff_val = (sum_prices / fromIntegral t :: Double) - k
         return $ max diff_val 0
 
-  total <- sum <$> replicateM n trial
+  total <- sum <$> replicateM n strial
   return $ (total * discount) / fromIntegral n
 
 bernoulli :: Double -> IO Int
@@ -41,30 +41,30 @@ bernoulliParallel :: Double -> SMGen -> (Int, SMGen)
 bernoulliParallel p gen = let (random_val, gen') = nextDouble gen
                           in (if random_val < p then 1 else 0, gen')
 
--- The main Monte Carlo function
+-- Modify calcPrice to include necessary parameters
+calcPrice :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> (Double, SMGen)
+calcPrice i t p_star u d sum_prices price genCalc
+  | i == t    = (sum_prices, genCalc)
+  | otherwise = let (b, genNext) = bernoulliParallel p_star genCalc
+                    (newPrice, newGen) = if b == 1
+                                          then (price * u, genNext)
+                                          else (price * d, genNext)
+                in calcPrice (i + 1) t p_star u d (sum_prices + newPrice) newPrice newGen
+
+trial :: Double -> Double -> Double -> Double -> Double -> Int -> SMGen -> Double
+trial p_star u d s0 k t genTrial = 
+  let (sum_prices, _) = calcPrice 0 t p_star u d 0 s0 genTrial
+      diff_val = (sum_prices / fromIntegral t) - k
+  in max diff_val 0
+
+-- Update monteCarloAsianParallel to pass parameters correctly
 monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> Double
 monteCarloAsianParallel n t r u d s0 k =
   let discount = 1 / ((1 + r) ^ t)
       p_star = (1 + r - d) / (u - d)
-      initialGen = mkSMGen 42 -- Seed for the random number generator
-
-      -- Function to calculate the trial value
-      calcPrice :: Int -> Double -> Double -> SMGen -> (Double, SMGen)
-      calcPrice i sum_prices price genCalc
-        | i == t    = (sum_prices, genCalc)
-        | otherwise = let (b, genNext) = bernoulliParallel p_star genCalc
-                          (newPrice, newGen) = if b == 1
-                                               then (price * u, genNext)
-                                               else (price * d, genNext)
-                      in calcPrice (i + 1) (sum_prices + newPrice) newPrice newGen
-
-      -- Function for a single trial
-      trial :: SMGen -> Double
-      trial genTrial = let (sum_prices, _) = calcPrice 0 0 s0 genTrial
-                           diff_val = (sum_prices / fromIntegral t) - k
-                       in max diff_val 0
-
-  in (sum (parMap rdeepseq trial (unfoldsSMGen initialGen n)) * discount) / fromIntegral n
+      trials = parMap rdeepseq (trial p_star u d s0 k t) (unfoldsSMGen (mkSMGen 42) n) `using` parList rdeepseq
+      result = sum trials * discount / fromIntegral n
+  in result
 
 -- Helper function to unfold SMGen into a list of n generators
 unfoldsSMGen :: SMGen -> Int -> [SMGen]
