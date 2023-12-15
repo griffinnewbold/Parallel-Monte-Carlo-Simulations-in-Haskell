@@ -1,5 +1,6 @@
 import Test.Hspec
 import Library 
+import Control.Concurrent (getNumCapabilities)
 
 {- | 
 Test Suite for the Monte Carlo Simulations functions contained within the Library module.
@@ -59,7 +60,7 @@ main = hspec $ do
           s0 = 50
           k = 70
 
-      monteCarloAsian n t r u d s0 k `shouldThrow` anyException
+      validateInputs n t r u d s0 k `shouldThrow` anyException
 
     it "TEST 4: Input validation test b: t must be at least 1\n" $ do
 
@@ -71,7 +72,7 @@ main = hspec $ do
           s0 = 50
           k = 70
 
-      monteCarloAsian n t r u d s0 k `shouldThrow` anyException
+      validateInputs n t r u d s0 k `shouldThrow` anyException
 
     it "TEST 5: Input validation test c: 0 < d < 1 + r < u must be satisfied\n" $ do
 
@@ -83,7 +84,7 @@ main = hspec $ do
           s0 = 50
           k = 70
 
-      monteCarloAsian n t r u d s0 k `shouldThrow` anyException
+      validateInputs n t r u d s0 k `shouldThrow` anyException
 
     it "TEST 6: Input validation test d: s0 must be greater than 0\n" $ do
 
@@ -95,7 +96,7 @@ main = hspec $ do
           s0 = -50
           k = 70
 
-      monteCarloAsian n t r u d s0 k `shouldThrow` anyException
+      validateInputs n t r u d s0 k `shouldThrow` anyException
 
     it "TEST 7: Input validation test d: k must be greater than 0\n" $ do
 
@@ -107,4 +108,24 @@ main = hspec $ do
           s0 = 50
           k = -70
 
-      monteCarloAsian n t r u d s0 k `shouldThrow` anyException
+      validateInputs n t r u d s0 k `shouldThrow` anyException
+
+    it "TEST 8: calculates the payoff of the option C_T \ 
+        \after T time units with parameters: n=10000, \
+        \t=50, r=0.07, u=1.15, d=1.01, s0=50, k=70\n" $ do
+
+      let n = 10000
+          t = 50
+          r = 0.07
+          u = 1.15
+          d = 1.01
+          s0 = 50
+          k = 70
+      
+      coreCount <- getNumCapabilities
+      let result = monteCarloAsianParallel coreCount n t r u d s0 k
+
+      let lowerBound = 11.4 
+          upperBound = 13.5  
+
+      result `shouldSatisfy` (\x -> x >= lowerBound && x <= upperBound)

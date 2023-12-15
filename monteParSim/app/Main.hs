@@ -1,10 +1,12 @@
 module Main (main) where
 
 import Library
-import System.CPUTime
+import Control.Concurrent (getNumCapabilities)
 
-
--- Normal values: n = 10000, t = 10, r = 0.05, u = 1.15, d = 1.01, s0 = 50, k = 70
+{- |
+Entry point for the system asks the user to enter different quantities
+and then validates the input prior to execution. 
+-}
 main :: IO ()
 main = do
     putStrLn "Enter the number of simulations (n):"
@@ -29,10 +31,9 @@ main = do
     k <- read <$> getLine
     validateInputs n t r u d s0 k
     putStrLn "Sequential Monte Carlo Simulation:"
-    startTimeAsian <- getCPUTime
     resultAsian <- monteCarloAsian n t r u d s0 k
-    endTimeAsian <- getCPUTime
-    let elapsedTimeAsian = fromIntegral (endTimeAsian - startTimeAsian) :: Double
-    putStrLn $ "Result Monte Carlo Asian Option: " ++ show resultAsian
-    putStrLn $ "Elapsed time: " ++ show elapsedTimeAsian ++ " nano seconds"
+    putStrLn $ "Result Monte Carlo Asian Option [Sequential]: " ++ show resultAsian
 
+    coreCount <- getNumCapabilities
+    let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k
+    putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar
