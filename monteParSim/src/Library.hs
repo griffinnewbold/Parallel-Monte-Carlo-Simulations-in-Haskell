@@ -58,11 +58,13 @@ trial p_star u d s0 k t genTrial =
   in max diff_val 0
 
 -- Update monteCarloAsianParallel to pass parameters correctly
-monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> Double
+monteCarloAsianParallel :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> Double 
 monteCarloAsianParallel n t r u d s0 k =
   let discount = 1 / ((1 + r) ^ t)
       p_star = (1 + r - d) / (u - d)
-      trials = parMap rdeepseq (trial p_star u d s0 k t) (unfoldsSMGen (mkSMGen 42) n) `using` parList rdeepseq
+      chunkSize = n `div` 4 -- for example, divide the work into 4 chunks
+      gens = unfoldsSMGen (mkSMGen 42) n
+      trials = parMap rdeepseq (trial p_star u d s0 k t) gens `using` parListChunk chunkSize rdeepseq
       result = sum trials * discount / fromIntegral n
   in result
 
