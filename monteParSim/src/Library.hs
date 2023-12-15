@@ -90,13 +90,14 @@ randomBernoulli p gen =
 
 mcTrial :: Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> (Double, SMGen)
 mcTrial t p_star s0 u d k gen =
-    let trialPath !i !sumPrices !price !gen'
-            | i == t = (sumPrices, gen')
+    let trialPath !i !sumPrices !avgPrice !price !gen'
+            | i == t = (avgPrice, gen')
             | otherwise =
                 let (b, newGen) = randomBernoulli p_star gen'
-                in trialPath (i + 1) (sumPrices + price * fromIntegral b) (price * if b == 1 then u else d) newGen
-        (sumPrices, newGen) = trialPath 0 0 s0 gen
-        diffVal = (sumPrices / fromIntegral t) - k
+                     newPrice = price * if b == 1 then u else d
+                in trialPath (i + 1) (sumPrices + newPrice) ((avgPrice * fromIntegral i + newPrice) / fromIntegral (i + 1)) newPirce newGen
+        (avgPrice, newGen) = trialPath 0 0 s0 s0 gen
+        diffVal = avgPrice - k
     in (max 0 diffVal, newGen)
 
 -- monteCarloAsianParallel 10000 10 0.05 1.15 1.01 50 70
