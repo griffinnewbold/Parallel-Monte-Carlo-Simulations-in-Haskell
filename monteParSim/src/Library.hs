@@ -9,10 +9,13 @@ import Control.Monad (replicateM, unless, when)
 -- Sequential Content Begins --
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsian n t r u d s0 k = do
+  -- Calculate discount factor and probability of an up movement
   let discount = 1 / ((1 + r) ^ t)
       pStar    = (1 + r - d) / (u - d)
 
+  -- Perform a single trial of the simulation
   let seqTrial = do
+        -- Recursively calculate the sum of prices along a path
         let seqCalcPrice i sumPrices price
               | i == t = return sumPrices
               | otherwise = do
@@ -20,10 +23,13 @@ monteCarloAsian n t r u d s0 k = do
                 if b == 1
                     then seqCalcPrice (i + 1) (sumPrices + (price * u)) (price * u)
                     else seqCalcPrice (i + 1) (sumPrices + (price * d)) (price * d)
+        
+        -- Calculate the difference between average simulate price and strike price
         sumPrices <- seqCalcPrice 0 0.0 s0
         let diffVal = (sumPrices / fromIntegral t) - k
         return $ diffVal `max` 0
 
+  -- Perform 'n' trials and compute the average
   total <- sum <$> replicateM n seqTrial
   return $ (total * discount) / fromIntegral n
 
@@ -34,6 +40,8 @@ bernoulli p = do
     return $ if randomVal < p then 1 else 0
 
 -- Sequential Content Ends --
+
+
 
 -- Parallel Content Begins --
 
