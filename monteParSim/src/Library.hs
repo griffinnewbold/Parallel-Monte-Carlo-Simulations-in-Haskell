@@ -62,6 +62,8 @@ bernoulli p = do
 
 -- Sequential Content Ends --
 
+
+
 -- Parallel Content Begins --
 
 -- Main function for the parallel simulations
