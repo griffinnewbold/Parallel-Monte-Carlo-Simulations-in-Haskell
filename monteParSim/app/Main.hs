@@ -4,6 +4,7 @@ import Library
 import Control.Concurrent (getNumCapabilities)
 import System.Random.SplitMix
 import Data.Time
+
 {- |
 Entry point for the system asks the user to enter different quantities
 and then validates the input prior to execution. 
@@ -30,7 +31,10 @@ main = do
 
     putStrLn "Enter the strike price (k):"
     k <- read <$> getLine
+
     validateInputs n t r u d s0 k
+
+    -- sequential non vector
     putStrLn "Sequential Monte Carlo Simulation:"
     start <- getCurrentTime
     resultAsian <- monteCarloAsian n t r u d s0 k
@@ -39,7 +43,7 @@ main = do
     putStrLn $ "Result Monte Carlo Asian Option [Sequential]: " ++ show resultAsian
     putStrLn $ "Time to Run: " ++ show timeDiff
 
-
+    -- parallel non vector
     coreCount <- getNumCapabilities
     initGen <- initSMGen
     start' <- getCurrentTime
@@ -49,6 +53,7 @@ main = do
     putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar
     putStrLn $ "Time to Run: " ++ show timeDiff'
 
+    -- sequential vector
     putStrLn "Sequential Monte Carlo Simulation Vector:"
     start'' <- getCurrentTime
     resultAsianVec <- monteCarloAsianVector n t r u d s0 k
@@ -57,6 +62,7 @@ main = do
     putStrLn $ "Result Monte Carlo Asian Option [Sequential Vector]: " ++ show resultAsianVec
     putStrLn $ "Time to Run: " ++ show timeDiff''
 
+    -- parallel vector
     putStrLn "Monte Carlo Simulation Parallel Vector:"
     start''' <- getCurrentTime
     let resultAsianPA = monteCarloAsianParallelVector coreCount n t r u d s0 k initGen

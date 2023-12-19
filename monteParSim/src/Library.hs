@@ -39,6 +39,7 @@ monteCarloAsian n t r u d s0 k = do
   total <- sum <$> replicateM n seqTrial
   return $ (total * discount) / fromIntegral n
 
+-- Main function for sequential vectors
 monteCarloAsianVector :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsianVector n t r u d s0 k = do
   let discount = 1 / ((1 + r) ** fromIntegral t)
@@ -47,9 +48,9 @@ monteCarloAsianVector n t r u d s0 k = do
   let vectorTrialSeq = do
         steps <- V.replicateM t (bernoulli pStar)
         let priceVector = V.scanl' (\price step -> price * (if step == 1 then u else d)) s0 steps
-        let sumPrices   = V.sum priceVector - priceVector V.! 0
-        let avgPrice    = sumPrices / fromIntegral t
-        let diffVal     = avgPrice - k
+            sumPrices   = V.sum priceVector - V.head priceVector
+            avgPrice    = sumPrices / fromIntegral t
+            diffVal     = avgPrice - k
         return $ max diffVal 0
 
   total <- sum <$> replicateM n vectorTrialSeq
@@ -62,9 +63,6 @@ bernoulli p = do
     return $ if randomVal < p then 1 else 0
 
 -- Sequential Content Ends --
-
-
-
 -- Parallel Content Begins --
 
 -- Main function for the parallel simulations
@@ -105,9 +103,7 @@ bernoulliParallel :: Double -> SMGen -> (Int, SMGen)
 bernoulliParallel p gen = let (!random_val, gen') = nextDouble gen
                           in (if random_val < p then 1 else 0, gen')
 
--- Parallel Content Ends --
-
--- General All purpose helper functions below -- 
+-- Main function for vectors in parallel
 monteCarloAsianParallelVector :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> Double
 monteCarloAsianParallelVector numCores n t r u d s0 k init_gen =
   let !discount = 1 / ((1 + r) ** fromIntegral t)
@@ -119,6 +115,7 @@ monteCarloAsianParallelVector numCores n t r u d s0 k init_gen =
       !result = sum trials * discount / fromIntegral n
   in result
 
+-- Helper function to complete a single vector trial
 vectorTrial :: Double -> Double -> Double -> Double -> Double -> Int -> SMGen -> Eval Double
 vectorTrial p_star u d s0 k t gen = do
   let steps = V.unfoldrN t (unfoldBernoulli p_star) gen
@@ -128,9 +125,12 @@ vectorTrial p_star u d s0 k t gen = do
       diffVal = avgPrice - k
   return $ max diffVal 0
 
+-- Helper function to generate the bernoullis
 unfoldBernoulli :: Double -> SMGen -> Maybe (Int, SMGen)
 unfoldBernoulli p gen = Just $ bernoulliParallel p gen
+-- Parallel Content Ends --
 
+-- General All purpose helper functions below -- 
 -- Helper function to validate the provided inputs from the user
 validateInputs :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO ()
 validateInputs n t r u d s0 k = do

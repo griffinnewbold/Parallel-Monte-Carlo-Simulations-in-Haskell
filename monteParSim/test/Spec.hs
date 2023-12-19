@@ -132,3 +132,42 @@ main = hspec $ do
           upperBound = 13.5  
 
       result `shouldSatisfy` (\x -> x >= lowerBound && x <= upperBound)
+
+    it "TEST 9: calculates the payoff of the option C_T \ 
+        \after T time units with parameters: n=10000, \
+        \t=50, r=0.07, u=1.15, d=1.01, s0=50, k=70\n" $ do
+
+      let n = 10000
+          t = 50
+          r = 0.07
+          u = 1.15
+          d = 1.01
+          s0 = 50
+          k = 70
+      
+      initGen' <- initSMGen
+      let result = monteCarloAsianParallelVector coreCount n t r u d s0 k initGen'
+
+      let lowerBound = 11.4 
+          upperBound = 13.5  
+
+      result `shouldSatisfy` (\x -> x >= lowerBound && x <= upperBound)
+
+    it "TEST 10: calculates the payoff of the option C_T \ 
+        \after T time units with parameters: n=10000, \
+        \t=50, r=0.07, u=1.15, d=1.01, s0=50, k=70\n" $ do
+
+      let n = 10000
+          t = 50
+          r = 0.07
+          u = 1.15
+          d = 1.01
+          s0 = 50
+          k = 70
+      
+      let result = monteCarloAsianVector  n t r u d s0 k 
+
+      let lowerBound = 11.4 
+          upperBound = 13.5  
+
+      result `shouldSatisfy` (\x -> x >= lowerBound && x <= upperBound)
