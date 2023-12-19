@@ -1,18 +1,26 @@
 {-# LANGUAGE BangPatterns #-}
-module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel, bernoulliParallel, unfoldsSMGen) where
+{-# LANGUAGE FlexibleContexts #-}
+module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel, 
+bernoulliParallel, unfoldsSMGen, monteCarloAsianVector) where
 
 import System.Random
 import System.Random.SplitMix
+import qualified Data.Vector as V
 import Control.Parallel.Strategies
+--import qualified Data.Array.Repa as R
 import Control.Monad (replicateM, unless, when)
+--import Data.Array.Repa ((:.)(..), Z(..), All(..), U)
 
 -- Sequential Content Begins --
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
 monteCarloAsian n t r u d s0 k = do
+  -- Calculate discount factor and probability of an up movement
   let discount = 1 / ((1 + r) ^ t)
       pStar    = (1 + r - d) / (u - d)
 
+  -- Perform a single trial of the simulation
   let seqTrial = do
+        -- Recursively calculate the sum of prices along a path
         let seqCalcPrice i sumPrices price
               | i == t = return sumPrices
               | otherwise = do
@@ -20,11 +28,30 @@ monteCarloAsian n t r u d s0 k = do
                 if b == 1
                     then seqCalcPrice (i + 1) (sumPrices + (price * u)) (price * u)
                     else seqCalcPrice (i + 1) (sumPrices + (price * d)) (price * d)
+        
+        -- Calculate the difference between average simulate price and strike price
         sumPrices <- seqCalcPrice 0 0.0 s0
         let diffVal = (sumPrices / fromIntegral t) - k
         return $ diffVal `max` 0
 
+  -- Perform 'n' trials and compute the average
   total <- sum <$> replicateM n seqTrial
+  return $ (total * discount) / fromIntegral n
+
+monteCarloAsianVector :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+monteCarloAsianVector n t r u d s0 k = do
+  let discount = 1 / ((1 + r) ** fromIntegral t)
+      pStar    = (1 + r - d) / (u - d)
+
+  let vectorTrial = do
+        steps <- V.replicateM t (bernoulli pStar)
+        let priceVector = V.scanl' (\price step -> price * (if step == 1 then u else d)) s0 steps
+        let sumPrices   = V.sum priceVector - priceVector V.! 0
+        let avgPrice    = sumPrices / fromIntegral t
+        let diffVal     = avgPrice - k
+        return $ max diffVal 0
+
+  total <- sum <$> replicateM n vectorTrial
   return $ (total * discount) / fromIntegral n
 
 -- Helper function for sequential algorithm to generate random values

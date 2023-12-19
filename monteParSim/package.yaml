@@ -23,8 +23,9 @@ dependencies:
   - base >= 4.7 && < 5
   - parallel >= 3.2.2.0  # Control.Parallel.Strategies
   - random >= 1.2.0.0    # Data.Random
-  - time >= 1.0
   - splitmix >= 0.1.0.4
+  - repa >= 3.4.1.4
+  - vector >= 0.12.3.1
 
 ghc-options:
 - -Wall

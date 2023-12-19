@@ -42,12 +42,9 @@ packages:
 #
 # extra-deps: []
 extra-deps:
+- vector-0.12.3.1
+- repa-3.4.1.4
 - splitmix-0.1.0.4
-- cairo-0.13.10.0@sha256:388f39af90d50b920cad70612046041a7ffd7f5b60721862c0c797ecddf7e902,4153
-- glib-0.13.10.0@sha256:e136db5cb19cbec17f823e919a0b44c12e50a90296d03c9d0c54761200611267,3171
-- gtk-0.15.8@sha256:26bfec55e0eaeccb04073ead54ce964d0ea9d8a19c5d5018948a18310668d528,16687
-- pango-0.13.10.0@sha256:4c7fc6187aadc2f3905a8fae7318ceccbb2af88134922536e3f4cae8640978dc,4081
-- gio-0.13.10.0@sha256:82e4e1e56f3fd2fe5d0df144f846dbcb93cfc7010aea9bfdff1bb664fbc6aa65,3266
 # Override default flag values for local packages and extra-deps
 # flags: {}
 
