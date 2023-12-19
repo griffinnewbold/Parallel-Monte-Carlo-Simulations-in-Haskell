@@ -25,6 +25,13 @@ packages:
       size: 1519
   original:
     hackage: splitmix-0.1.0.4
+- completed:
+    hackage: repa-algorithms-3.4.1.5@sha256:76cd80f537278b9182c59629956ad0aacbb4e6ef8016bc12097a7e22ef8c4e64,1921
+    pantry-tree:
+      sha256: 2c4ed6a7e619a1251b7e90301df6c4050cb8568332ee3efa15d78d11d0f6be24
+      size: 938
+  original:
+    hackage: repa-algorithms-3.4.1.5
 snapshots:
 - completed:
     sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4

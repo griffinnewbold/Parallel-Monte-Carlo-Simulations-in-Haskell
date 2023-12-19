@@ -1,15 +1,16 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
 module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel, 
-bernoulliParallel, unfoldsSMGen, monteCarloAsianVector) where
+bernoulliParallel, unfoldsSMGen, monteCarloAsianVector, monteCarloAsianRepa) where
 
 import System.Random
 import System.Random.SplitMix
 import qualified Data.Vector as V
 import Control.Parallel.Strategies
---import qualified Data.Array.Repa as R
+import qualified Data.Array.Repa as R
 import Control.Monad (replicateM, unless, when)
---import Data.Array.Repa ((:.)(..), Z(..), All(..), U)
+import Data.Array.Repa.Algorithms.Randomish 
+import Data.Array.Repa ((:.)(..), Z(..))
 
 -- Sequential Content Begins --
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
@@ -107,6 +108,32 @@ bernoulliParallel p gen = let (!random_val, gen') = nextDouble gen
 -- Parallel Content Ends --
 
 -- General All purpose helper functions below -- 
+monteCarloAsianRepa :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+monteCarloAsianRepa n t r u d s0 k = do
+    let discount = 1 / ((1 + r) ** fromIntegral t)
+    let pStar = (1 + r - d) / (u - d)
+
+    -- Generate randomish values for paths
+    let randVals = randomishDoubleArray (Z :. n :. t) 0 1 42
+    paths <- R.computeUnboxedP $ R.zipWith (\randVal _ -> if randVal < pStar then u else d) randVals (R.fromFunction (Z :. n :. t) id)
+
+    -- Calculate average prices for each path
+    let avgPrices = R.traverse paths (\(Z :. _ :. _) -> Z :. n) $ \lookupAvg (Z :. trial') -> 
+                    let pricePath = [lookupAvg (Z :. trial' :. step) * s0 | step <- [0 .. t-1]]
+                    in sum pricePath / fromIntegral t
+    putStrLn $ "Average prices: " ++ show (R.toList avgPrices)
+
+    -- Calculate payoffs
+    let payoffs = R.map (\avgPrice -> max 0 (avgPrice - k)) avgPrices
+    putStrLn $ "Payoffs: " ++ show (R.toList payoffs)
+
+    -- Compute the final result
+    meanPayoff <- R.sumAllP payoffs
+    return $ (meanPayoff / fromIntegral n) * discount
+
+
+
+
 
 -- Helper function to validate the provided inputs from the user
 validateInputs :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO ()
