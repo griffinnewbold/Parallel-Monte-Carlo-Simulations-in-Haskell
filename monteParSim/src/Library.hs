@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE FlexibleContexts #-}
-module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel, 
+{-# LANGUAGE ScopedTypeVariables #-}
+module Library (bernoulli, monteCarloAsian, validateInputs, monteCarloAsianParallel,
 bernoulliParallel, unfoldsSMGen, monteCarloAsianVector, monteCarloAsianRepa) where
 
 import System.Random
@@ -9,8 +10,8 @@ import qualified Data.Vector as V
 import Control.Parallel.Strategies
 import qualified Data.Array.Repa as R
 import Control.Monad (replicateM, unless, when)
-import Data.Array.Repa.Algorithms.Randomish 
-import Data.Array.Repa ((:.)(..), Z(..))
+import Data.Array.Repa.Algorithms.Randomish
+import Data.Array.Repa ((:.)(..), Z(..), DIM2)
 
 -- Sequential Content Begins --
 monteCarloAsian :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
@@ -29,7 +30,7 @@ monteCarloAsian n t r u d s0 k = do
                 if b == 1
                     then seqCalcPrice (i + 1) (sumPrices + (price * u)) (price * u)
                     else seqCalcPrice (i + 1) (sumPrices + (price * d)) (price * d)
-        
+
         -- Calculate the difference between average simulate price and strike price
         sumPrices <- seqCalcPrice 0 0.0 s0
         let diffVal = (sumPrices / fromIntegral t) - k
@@ -72,7 +73,7 @@ monteCarloAsianParallel :: Int -> Int -> Int -> Double -> Double -> Double -> Do
 monteCarloAsianParallel numCores n t r u d s0 k init_gen =
   let !discount = 1 / ((1 + r) ^ t)
       !p_star = (1 + r - d) / (u - d)
-      chunkSize = n `div` (10 * numCores) 
+      chunkSize = n `div` (10 * numCores)
       gens = unfoldsSMGen init_gen n
       trials = withStrategy (parListChunk chunkSize rdeepseq) $
                map (runEval . trial p_star u d s0 k t) gens
@@ -108,31 +109,45 @@ bernoulliParallel p gen = let (!random_val, gen') = nextDouble gen
 -- Parallel Content Ends --
 
 -- General All purpose helper functions below -- 
-monteCarloAsianRepa :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
-monteCarloAsianRepa n t r u d s0 k = do
+monteCarloAsianRepa :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> IO Double
+monteCarloAsianRepa seed n t r u d s0 k = do
     let discount = 1 / ((1 + r) ** fromIntegral t)
     let pStar = (1 + r - d) / (u - d)
 
     -- Generate randomish values for paths
-    let randVals = randomishDoubleArray (Z :. n :. t) 0 1 42
-    paths <- R.computeUnboxedP $ R.zipWith (\randVal _ -> if randVal < pStar then u else d) randVals (R.fromFunction (Z :. n :. t) id)
+    let randVals = randomishDoubleArray (Z :. n :. t+1) 0 1 seed
+
+    let initialColumn = R.computeS $ R.fromFunction (Z :. n :. 1) $ \(Z :. _ :. _) -> s0
+    paths <- buildPaths initialColumn randVals n (t+1) s0 pStar u d 1
+    let pathsWithZeroFirstColumn :: R.Array R.U DIM2 Double
+        pathsWithZeroFirstColumn = R.computeS $ R.fromFunction (R.extent paths) $ \(Z :. i :. j) ->
+                                    if j == 0 then 0 else R.index paths (Z :. i :. j)
 
     -- Calculate average prices for each path
-    let avgPrices = R.traverse paths (\(Z :. _ :. _) -> Z :. n) $ \lookupAvg (Z :. trial') -> 
-                    let pricePath = [lookupAvg (Z :. trial' :. step) * s0 | step <- [0 .. t-1]]
-                    in sum pricePath / fromIntegral t
-    putStrLn $ "Average prices: " ++ show (R.toList avgPrices)
-
-    -- Calculate payoffs
-    let payoffs = R.map (\avgPrice -> max 0 (avgPrice - k)) avgPrices
-    putStrLn $ "Payoffs: " ++ show (R.toList payoffs)
+    let summedValues = R.sumS pathsWithZeroFirstColumn
+        avgPrices = R.map (/ fromIntegral t) summedValues
+        values = R.map (\avgPrice -> avgPrice - k) avgPrices
+        payoffs = R.map (\value -> max 0 value) values
 
     -- Compute the final result
     meanPayoff <- R.sumAllP payoffs
-    return $ (meanPayoff / fromIntegral n) * discount
+    return $ (meanPayoff * discount) / fromIntegral n
 
 
-
+buildPaths :: R.Array R.U DIM2 Double -> R.Array R.U DIM2 Double -> Int -> Int -> Double -> Double -> Double -> Double -> Int -> IO (R.Array R.U DIM2 Double)
+buildPaths arr randVals n t s0 pStar u d j
+  | j >= t    = return arr
+  | otherwise = do
+      let arr' = R.fromFunction (Z :. n :. (j + 1)) $ \(Z :. i :. k) ->
+                  if k == 0
+                  then s0
+                  else if k == j
+                       then let prevPrice = arr R.! (Z :. i :. (k - 1))
+                                factor = if randVals R.! (Z :. i :. (k - 1)) < pStar then u else d
+                            in prevPrice * factor
+                       else arr R.! (Z :. i :. k)
+      arrP <- R.computeP arr'
+      buildPaths arrP randVals n t s0 pStar u d (j + 1)
 
 
 -- Helper function to validate the provided inputs from the user

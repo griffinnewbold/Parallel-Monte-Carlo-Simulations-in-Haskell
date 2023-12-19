@@ -3,7 +3,7 @@ module Main (main) where
 import Library
 import Control.Concurrent (getNumCapabilities)
 import System.Random.SplitMix
-
+import System.Random
 {- |
 Entry point for the system asks the user to enter different quantities
 and then validates the input prior to execution. 
@@ -39,3 +39,12 @@ main = do
     initGen <- initSMGen
     let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k initGen
     putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar
+
+    putStrLn "Sequential Monte Carlo Simulation Vector:"
+    resultAsianVec <- monteCarloAsianVector n t r u d s0 k
+    putStrLn $ "Result Monte Carlo Asian Option [Sequential Vector]: " ++ show resultAsianVec
+
+    num <- randomIO :: IO Int
+    putStrLn "Monte Carlo Simulation Parallel Array:"
+    resultAsianRepa <- monteCarloAsianRepa num n t r u d s0 k
+    putStrLn $ "Result Monte Carlo Asian Option [Parallel Array]: " ++ show resultAsianRepa
