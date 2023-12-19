@@ -27,6 +27,8 @@ dependencies:
   - repa >= 3.4.1.4
   - vector >= 0.12.3.1
   - repa-algorithms >= 3.4.1.4
+  - time >= 1.9.3
+  - deepseq >= 1.4.5.0
 
 ghc-options:
 - -Wall
@@ -50,6 +52,7 @@ executables:
     - -threaded
     - -rtsopts
     - -with-rtsopts=-N
+    - -O2 
     dependencies:
     - monteParSim
 

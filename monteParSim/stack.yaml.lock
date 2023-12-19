@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: deepseq-1.4.5.0@sha256:5238d30981b821596bc41f9f177352328f003b49c31d35ea7daab55f8a8efade,2961
+    pantry-tree:
+      sha256: 2346d92e2edd40dae49bac757b7e3f20eb3c75039a5334f2eb5c380784ad20a7
+      size: 385
+  original:
+    hackage: deepseq-1.4.5.0
+- completed:
     hackage: vector-0.12.3.1@sha256:39141f312871b7c793a63be76635999e84d442aa3290aec59f30638ec0bf23a7,8218
     pantry-tree:
       sha256: c4f50de0598ce416df3a8f01ad7f23d8f1282ef3c5c531d67afe15b1e14a5d8d
@@ -32,6 +39,13 @@ packages:
       size: 938
   original:
     hackage: repa-algorithms-3.4.1.5
+- completed:
+    hackage: time-1.12.2@sha256:88e8493d9130038d3b9968a2530a0900141cd3d938483c83dde56e12b875ebc8,6510
+    pantry-tree:
+      sha256: de0ab314661da3788b5dad20254e44929b1659b00d32b5a0cd54922a05e006e8
+      size: 7264
+  original:
+    hackage: time-1.12.2
 snapshots:
 - completed:
     sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4

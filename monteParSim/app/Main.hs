@@ -3,7 +3,7 @@ module Main (main) where
 import Library
 import Control.Concurrent (getNumCapabilities)
 import System.Random.SplitMix
-import System.Random
+import Data.Time
 {- |
 Entry point for the system asks the user to enter different quantities
 and then validates the input prior to execution. 
@@ -32,19 +32,35 @@ main = do
     k <- read <$> getLine
     validateInputs n t r u d s0 k
     putStrLn "Sequential Monte Carlo Simulation:"
+    start <- getCurrentTime
     resultAsian <- monteCarloAsian n t r u d s0 k
+    stop <- getCurrentTime
+    let timeDiff = diffUTCTime stop start
     putStrLn $ "Result Monte Carlo Asian Option [Sequential]: " ++ show resultAsian
+    putStrLn $ "Time to Run: " ++ show timeDiff
+
 
     coreCount <- getNumCapabilities
     initGen <- initSMGen
+    start' <- getCurrentTime
     let resultPar = monteCarloAsianParallel coreCount n t r u d s0 k initGen
+    stop' <- getCurrentTime
+    let timeDiff' = diffUTCTime stop' start'
     putStrLn $ "Result Monte Carlo Asian Option [Parallel]: " ++ show resultPar
+    putStrLn $ "Time to Run: " ++ show timeDiff'
 
     putStrLn "Sequential Monte Carlo Simulation Vector:"
+    start'' <- getCurrentTime
     resultAsianVec <- monteCarloAsianVector n t r u d s0 k
+    stop'' <- getCurrentTime
+    let timeDiff'' = diffUTCTime stop'' start''
     putStrLn $ "Result Monte Carlo Asian Option [Sequential Vector]: " ++ show resultAsianVec
+    putStrLn $ "Time to Run: " ++ show timeDiff''
 
-    num <- randomIO :: IO Int
-    putStrLn "Monte Carlo Simulation Parallel Array:"
-    resultAsianRepa <- monteCarloAsianRepa num n t r u d s0 k
-    putStrLn $ "Result Monte Carlo Asian Option [Parallel Array]: " ++ show resultAsianRepa
+    putStrLn "Monte Carlo Simulation Parallel Vector:"
+    start''' <- getCurrentTime
+    let resultAsianPA = monteCarloAsianParallelVector coreCount n t r u d s0 k initGen
+    stop''' <- getCurrentTime
+    let timeDiff''' = diffUTCTime stop''' start'''
+    putStrLn $ "Result Monte Carlo Asian Option [Parallel Vector]: " ++ show resultAsianPA
+    putStrLn $ "Time to Run: " ++ show timeDiff'''
