@@ -12,7 +12,7 @@ import Control.Monad (replicateM, when, unless)
 This is the file allows for testing the individual performance of the
 sequential and parallel versions of the Monte Carlo Asian Option Functions
 with different parameters/ number of cores.  This file was used to conduct
-the performance tests seen in the project report.
+most of the performance tests seen in the project report.
 
 To use, follow the instructions below:
 
