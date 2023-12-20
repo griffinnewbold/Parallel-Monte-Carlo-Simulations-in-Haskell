@@ -69,11 +69,11 @@ bernoulli p = do
 monteCarloAsianParallel :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> Double
 monteCarloAsianParallel numCores n t r u d s0 k init_gen =
   let !discount = 1 / ((1 + r) ^ t)
-      !p_star = (1 + r - d) / (u - d)
+      !pStar = (1 + r - d) / (u - d)
       chunkSize = n `div` (10 * numCores)
       gens = unfoldsSMGen init_gen n
       trials = withStrategy (parListChunk chunkSize rdeepseq) $
-               map (runEval . trial p_star u d s0 k t) gens
+               map (runEval . trial pStar u d s0 k t) gens
       !result = sum trials * discount / fromIntegral n
   in result
 
@@ -83,42 +83,42 @@ unfoldsSMGen gen n = take n $ iterate (snd . splitSMGen) gen
 
 -- Helper function to complete a single trial
 trial :: Double -> Double -> Double -> Double -> Double -> Int -> SMGen -> Eval Double
-trial p_star u d s0 k t genTrial = do
-  let (!sum_prices, _) = calcPrice 0 t p_star u d 0 s0 genTrial
-      !diff_val = (sum_prices / fromIntegral t) - k
-  return $ max diff_val 0
+trial pStar u d s0 k t genTrial = do
+  let (!sumPrices, _) = calcPrice 0 t pStar u d 0 s0 genTrial
+      !diffVal = (sumPrices / fromIntegral t) - k
+  return $ max diffVal 0
 
 -- Helper function to calculate the price in a given trial
 calcPrice :: Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> (Double, SMGen)
-calcPrice i t p_star u d !sum_prices !price genCalc
-  | i == t    = (sum_prices, genCalc)
-  | otherwise = let (b, genNext) = bernoulliParallel p_star genCalc
+calcPrice i t pStar u d !sumPrices !price genCalc
+  | i == t    = (sumPrices, genCalc)
+  | otherwise = let (b, genNext) = bernoulliParallel pStar genCalc
                     (!newPrice, newGen) = if b == 1
                                           then (price * u, genNext)
                                           else (price * d, genNext)
-                in calcPrice (i + 1) t p_star u d (sum_prices + newPrice) newPrice newGen
+                in calcPrice (i + 1) t pStar u d (sumPrices + newPrice) newPrice newGen
 
 -- Helper function to generate a Bernoulli trial result given a probability and a generator
 bernoulliParallel :: Double -> SMGen -> (Int, SMGen)
-bernoulliParallel p gen = let (!random_val, gen') = nextDouble gen
-                          in (if random_val < p then 1 else 0, gen')
+bernoulliParallel p gen = let (!randomVal, gen') = nextDouble gen
+                          in (if randomVal < p then 1 else 0, gen')
 
 -- Main function for vectors in parallel
 monteCarloAsianParallelVector :: Int -> Int -> Int -> Double -> Double -> Double -> Double -> Double -> SMGen -> Double
 monteCarloAsianParallelVector numCores n t r u d s0 k init_gen =
   let !discount = 1 / ((1 + r) ** fromIntegral t)
-      !p_star = (1 + r - d) / (u - d)
+      !pStar = (1 + r - d) / (u - d)
       chunkSize = n `div` (10 * numCores)
       gens = unfoldsSMGen init_gen n
       trials = withStrategy (parListChunk chunkSize rdeepseq) $
-               map (runEval . vectorTrial p_star u d s0 k t) gens
+               map (runEval . vectorTrial pStar u d s0 k t) gens
       !result = sum trials * discount / fromIntegral n
   in result
 
 -- Helper function to complete a single vector trial
 vectorTrial :: Double -> Double -> Double -> Double -> Double -> Int -> SMGen -> Eval Double
-vectorTrial p_star u d s0 k t gen = do
-  let steps = V.unfoldrN t (unfoldBernoulli p_star) gen
+vectorTrial pStar u d s0 k t gen = do
+  let steps = V.unfoldrN t (unfoldBernoulli pStar) gen
       priceVector = V.scanl' (\price step -> price * (if step == 1 then u else d)) s0 steps
       sumPrices = V.sum priceVector - V.head priceVector
       avgPrice = sumPrices / fromIntegral t
